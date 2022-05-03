@@ -1,0 +1,12 @@
+# Import CDS Toolbox
+import cdstoolbox as ct
+
+# Initialise the application
+@ct.application(
+    title='Add title',
+    description='Add description')
+    
+# Add an output widget
+## Bar or line chart based on Plotly
+@ct.output.livefigure()
+
