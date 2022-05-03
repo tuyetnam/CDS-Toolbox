@@ -1,0 +1,168 @@
+# Import Toolbox
+import cdstoolbox as ct
+
+# Initialise the application
+@ct.application(
+    title='Add title',
+    description='Add description')
+    
+# Add an output widget
+## Bar or line chart based on Plotly
+@ct.output.livefigure()
+
+# Define the application function
+def name_of_application ():
+
+# Retrieve ERA5 monthly averaged data on single levels (this example: monthly averaged temperature)
+## grid:[3, 3] --> to define the spatial resolution, if no grid is specified then default solution for ERA5 (0.25 x 0.25 deg.) is used
+t2m_monthly_mean = ct.catalogue.retrieve(
+    'reanalysis-era5-single-levels-monthly-means',
+    {
+        'product_type': 'monthly_averaged_reanalysis',
+        'variable': '2m_temperature',
+        'year': ['2009','2010','2011','2012','2013','2014','2015','2016','2017','2018'],
+        'month': [
+            '01','02','03',
+            '04','05','06',
+            '07','08','09',
+            '10','11','12'
+        ],
+        'time': '00:00',
+        'grid': [3, 3],
+    }
+)
+
+# Retrieve ERA5 hourly data on single levels (this example: total precipitation flux, unit: m/s)
+tp_hourly = ct.catalogue.retrieve(
+    'reanalysis-era5-single-levels',
+    {
+        'product_type':'reanalysis',
+        'variable':'total_precipitation',
+        'year':[
+            '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018'
+        ],
+        'month':[
+            '01', '02', '03',
+            '04', '05', '06',
+            '07', '08', '09',
+            '10', '11', '12'
+        ],
+        'day':[
+            '01', '02', '03',
+            '04', '05', '06',
+            '07', '08', '09',
+            '10', '11', '12',
+            '13', '14', '15',
+            '16', '17',  '18',
+            '19', '20', '21',
+            '22', '23', '24',
+            '25', '26', '27',
+            '28', '29', '30',
+            '31'
+        ],
+        'time':[
+            '00:00','01:00','02:00',
+            '03:00','04:00','05:00',
+            '06:00','07:00','08:00',
+            '09:00','10:00','11:00',
+            '12:00','13:00','14:00',
+            '15:00','16:00','17:00',
+            '18:00','19:00','20:00',
+            '21:00','22:00','23:00'
+        ],
+        'grid':[3, 3]
+    }
+)
+
+# Resample total precipitation hourly data (convert flux into a cumulative column of water per hour (mm))
+tp_hourly_column = tp_hourly * 3600 * 1000
+tp_hourly_column = ct.cdm.update_attributes(tp_hourly_column, {'units': 'mm'})
+tp_monthly_sums = ct.cube.resample(tp_hourly_column, freq='month', dim='time', closed='right', how='sum')
+## Total precipitation is a forecast parameter and the 00:00 time step gives the precipitation falling between 23:00 and 00:00 of the previous day. 
+## Setting closed='right' ignores this first 00:00 time step for each day, and instead takes the 00:00 time step from the following day.
+
+# Check retrieved data
+print(<tp_monthly_sums>)
+
+# Generate climatology means for each month
+t2m_mean_climatology = ct.climate.climatology_mean(t2m_monthly_mean, frequency='month')
+tp_climatology = ct.climate.climatology_mean(tp_monthly_sums, frequency='month')
+
+# Select a location
+t2m_mean_loc = ct.geo.extract_point(t2m_mean_climatology, lon=12.5., lat=41.9)
+tp_loc = ct.geo.extract_point(tp_climatology, lon=12.5, lat=41.9)
+
+# Generate chart
+## Define chart layout
+layout_kwargs = {
+    'width': 1000,
+    'height': 700,
+    'legend': {
+        'orientation': 'h',
+        'y': -0.15,
+        'x': 0.1
+    },
+    'yaxis': {
+        'overlaying': 'y2',
+        'zeroline': False,
+        'title': '2m air temperature in deg C'
+    },
+    'margin': {'t': 25},
+    'xaxis': {
+        'tickvals': [1,2,3,4,5,6,7,8,9,10,11,12],
+        'ticktext': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        'title': 'Month'
+    },
+    'yaxis2': {
+        'showgrid': False,
+        'side': 'right',
+        'zeroline': False,
+        'title': 'Total precipitation in mm'
+    }
+}
+
+## Define chart object
+fig = ct.chart.bar(
+    tp_loc,
+    bar_kwargs={
+        'name':'Total precipitation',
+        'yaxis': 'y2'
+    },
+    marker={'color':'lightsteelblue'},
+    layout_kwargs=layout_kwargs
+)
+
+# Add a line plot for 2m mean temperature to the plot
+fig = ct.chart.line(
+    t2m_mean_loc,
+    fig=fig,
+    scatter_kwargs={
+        'name':'Mean temperature',
+        'mode':'lines'
+    },
+    marker={'color':'firebrick'},
+    layout_kwargs=layout_kwargs
+)
+
+return fig
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
