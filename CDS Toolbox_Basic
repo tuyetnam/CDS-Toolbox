@@ -10,3 +10,8 @@ import cdstoolbox as ct
 ## Bar or line chart based on Plotly
 @ct.output.livefigure()
 
+# Define the application function
+def name_of_application ():
+
+
+
