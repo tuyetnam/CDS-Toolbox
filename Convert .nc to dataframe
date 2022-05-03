@@ -1,0 +1,5 @@
+import xarray as xr
+import pandas as pd
+
+ds = xr.open_dataset ('path/file_nam.nc')
+df = ds. to_dataframe() 
